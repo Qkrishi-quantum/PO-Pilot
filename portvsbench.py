@@ -726,10 +726,10 @@ if st.button('Next'):
         df_bench = df_bench.sort_values(by='Contribution to return(%)', ascending=False)
         col7, col8 = st.columns(2)
         with col7:
-            st.markdown('**Contribution to return - Portfolio (Top/Bottom 10)**')
+            st.markdown('**Contribution to return - Portfolio (Top 10/Bottom 10)**')
             st.write(df_port.set_index('Company'))
         with col8:
-            st.markdown('**Contribution to return - Benchmark (Top/Bottom 10)**')
+            st.markdown('**Contribution to return - Benchmark (Top 10/Bottom 10)**')
             st.write(df_bench.set_index('Company'))
 
         #st.markdown('**Allocation Effect**')
