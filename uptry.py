@@ -29,7 +29,7 @@ from dwave.samplers import SimulatedAnnealingSampler
 import ml_collections
 from statsmodels.tsa.filters.hp_filter import hpfilter
 optuna.logging.set_verbosity(optuna.logging.WARNING)
-from alpha_vantage.timeseries import TimeSeries
+#from alpha_vantage.timeseries import TimeSeries
 from datetime import datetime
 
 seed = 42
