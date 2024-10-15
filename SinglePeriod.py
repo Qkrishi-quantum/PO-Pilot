@@ -29,7 +29,7 @@ class SinglePeriod:
         self.sample_set = {}
     
         self.sampler = {
-            "CQM": LeapHybridCQMSampler(token='DEV-bff296e5ca302de3718963ff2cb1532ad63de845'),
+            "CQM": LeapHybridCQMSampler(token='DEV-62e9d2528a9288aadf840016519e803a5b9e5336'),
         }
     
         self.solution = {}
