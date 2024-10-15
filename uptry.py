@@ -734,7 +734,7 @@ if st.button('Rebalancing'):
                     
                 for column in columns_to_style:
                     updated_dataf[column] = updated_dataf[column].apply(apply_styling)
-                updated_dataf["Value"] = updated_dataf["Value"] * 537787.2409820557
+                updated_dataf["Value"] = updated_dataf["Value"] * total_budget
                 updated_dataf = updated_dataf.loc[:, (updated_dataf != 0).any(axis=0)] # to remove columns with 0s
                 updated_dataf = updated_dataf.to_html(float_format=lambda x: '{:.2f}'.format(x), escape=False)
                 #st.write(new_data_dict)
