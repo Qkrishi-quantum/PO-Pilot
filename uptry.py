@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from plotly import graph_objs as go
 import plotly.express as px
+from scipy.stats import linregress
 from datetime import date
 import yfinance as yf
 import os
@@ -428,6 +429,7 @@ if st.button('Next'):
             cr_tickers = cr_data['Symbol'].tolist()
             cr_weightages = cr_data['Weightage(%)'].tolist()
             cr_dict = dict(zip(cr_tickers, cr_weightages))
+            #st.write(cr_dict)
             working_days = np.busday_count(start_date_port.date(), end_date_port.date())
 
             def calculate_top_contributors(tickers_weights, start_date, end_date):
@@ -473,28 +475,125 @@ if st.button('Next'):
                 st.write(top_contributors.set_index('Company'))
 
 
-            # st.markdown('<p style="font-size:20px;"><b>Beta</b></p>', unsafe_allow_html=True)
-            # end_date = end_date
-            # start_date_beta = datetime(end_date.year - 2, end_date.month, end_date.day)
-            # historical_data_beta = {}
-            # for symbol in stock_symbols:
-            #     historical_data_beta[symbol] = yf.download(symbol, start=start_date_beta, end=end_date)['Adj Close']
+            st.markdown('<p style="font-size:20px;"><b>Beta</b></p>', unsafe_allow_html=True)
+            end_date = end_date
+            start_date_beta = datetime(end_date.year - 2, end_date.month, end_date.day)
+            historical_data_beta = {}
+            for symbol in stock_symbols:
+                historical_data_beta[symbol] = yf.download(symbol, start=start_date_beta, end=end_date)['Adj Close']
 
-            # adj_close_df_beta = pd.DataFrame(historical_data_beta)
-            # adj_close_df_beta.to_csv('adj_close_df_beta.csv')
+            adj_close_df_beta = pd.DataFrame(historical_data_beta)
+            adj_close_df_beta.to_csv('adj_close_df_beta.csv')
 
-            # stock_wt = dict(zip(df['SECURITY_ID'], wt_stock))
-            # stock_quantities = dict(zip(df['SECURITY_ID'],df['QUANTITY'] ))
+            stock_wt = dict(zip(df['SECURITY_ID'], wt_stock))
+            stock_quantities = dict(zip(df['SECURITY_ID'],df['QUANTITY']))
 
-            # portfolio_values_port = adj_close_df_beta.apply(lambda row: sum(
-            # row[stock] * stock_quantities[stock] for stock in stock_quantities), axis=1)
-            # adj_close_df_beta['PV_Port'] = portfolio_values_port
+            portfolio_values_port = adj_close_df_beta.apply(lambda row: sum(
+            row[stock] * stock_quantities[stock] for stock in stock_quantities), axis=1)
+            adj_close_df_beta['PV_Port'] = portfolio_values_port
 
-            # st.write(adj_close_df_beta)
+            st.write(adj_close_df_beta)
+
+            historical_data_beta_bench = {}
+            for symbol in cr_dict:
+                historical_data_beta_bench[symbol] = yf.download(symbol, start=start_date_beta, end=end_date)['Adj Close']
+            adj_close_df_beta_bench = pd.DataFrame(historical_data_beta_bench)
+            #adj_close_df_beta_bench = adj_close_df_beta_bench.dropna(axis=1, how='any') #removes nan columns
+            adj_close_df_beta_bench = adj_close_df_beta_bench.fillna(0)
+
+            #adj_close_df_beta_bench.index = pd.to_datetime(adj_close_df_beta_bench.index)
+            #adj_close_df_beta_bench['Date'] = pd.to_datetime(adj_close_df_beta_bench['Date'], format='%Y-%m-%d')
+            adj_close_df_beta_bench.to_csv('adj_close_df_beta_bench.csv')
+            #st.write(adj_close_df_beta_bench)
+            total_investment_beta = adj_close_df_beta_bench.iloc[0].sum()
+            #st.write(total_investment_beta)
+            investment_per_stock_beta_bench = {stock: total_investment_beta* weight/100 for stock, weight in cr_dict.items()}
+            #st.write(investment_per_stock_beta_bench)
+            #optimal_stocks_beta = {stock: investment // adj_close_df_beta_bench.iloc[0][stock] for stock, investment in investment_per_stock_beta_bench.items()}
+            optimal_stocks_beta = {
+                stock: (investment // adj_close_df_beta_bench.iloc[0][stock]) if adj_close_df_beta_bench.iloc[0][stock] != 0 else 0
+                for stock, investment in investment_per_stock_beta_bench.items()}
+            #st.write(optimal_stocks_beta)
+            portfolio_value_beta = adj_close_df_beta_bench.apply(lambda row: sum(row[stock] * optimal_stocks_beta[stock] for stock in optimal_stocks_beta), axis=1)
+            adj_close_df_beta_bench['PV_Bench'] = portfolio_value_beta
+            #st.write(adj_close_df_beta_bench)
+
+
+            slope, intercept, r_value, p_value, std_err = linregress(portfolio_value_beta, portfolio_values_port)
+            beta = slope
+            st.write(beta)
+
+            st.markdown('<p style="font-size:20px;"><b>Standard Deviation</b></p>', unsafe_allow_html=True)
+            adj_close_df_beta['PV_Port'] = (adj_close_df_beta['PV_Port'] - adj_close_df_beta['PV_Port'].shift(1)) / adj_close_df_beta['PV_Port'].shift(1)
+            adj_close_df_beta_bench['PV_Bench'] = (adj_close_df_beta_bench['PV_Bench'] - adj_close_df_beta_bench['PV_Bench'].shift(1)) / adj_close_df_beta_bench['PV_Bench'].shift(1)
+            adj_close_df_beta['PV_Port'] = adj_close_df_beta['PV_Port'].fillna(0)
+            adj_close_df_beta_bench['PV_Bench'] = adj_close_df_beta_bench['PV_Bench'].fillna(0)
+            std_port = adj_close_df_beta['PV_Port'].std() * np.sqrt(504) * 100
+            std_bench = adj_close_df_beta_bench['PV_Bench'].std() * np.sqrt(504) * 100
+            st.write('Standard Deviation of Portfolio:', std_port)
+            st.write('Standard Deviation of Benchmark:', std_bench)
+
+            st.markdown('<p style="font-size:20px;"><b>Max Draw Down</b></p>', unsafe_allow_html=True)
+            def calculate_max_drawdown(series):
+                roll_max = series.cummax()
+                daily_drawdown = series / roll_max - 1.0
+                max_drawdown = daily_drawdown.cummin()
+                return max_drawdown.min()
+            
+            max_drawdown_port= calculate_max_drawdown(adj_close_df['Return'])
+            max_drawdown_bench = calculate_max_drawdown(benchdata['Return'])
+
+            st.write("Max Drawdown for Portfolio:", max_drawdown_port*100)
+            st.write("Max Drawdown for Benchmark:", max_drawdown_bench*100)
+
+            st.markdown('<p style="font-size:20px;"><b>Sortino Ratio</b></p>', unsafe_allow_html=True)
+            adj_close_df['Shift'] = (adj_close_df['Return'] - adj_close_df['Return'].shift(1))
+            adj_close_df['Shift'] = adj_close_df['Shift'].fillna(0)
+            adj_close_df['Shift'] = adj_close_df['Shift'].apply(lambda x: 0 if x > 0 else x)
+            sd_1 = adj_close_df['Shift'].std()
+            return_1 = (adj_close_df['Return'].iloc[-1] - adj_close_df['Return'].iloc[0])/100
+            sr_1 = (return_1-0.07)/sd_1
+            st.write('Sortino Ratio of Portfolio:', sr_1)
+
+            benchdata['Shift'] = benchdata['Return'] - benchdata['Return'].shift(1)
+            benchdata['Shift'] = benchdata['Shift'].fillna(0)
+            benchdata['Shift'] = benchdata['Shift'].apply(lambda y: 0 if y > 0 else y)
+            sd_2 = benchdata['Shift'].std()
+            return_2 = (benchdata['Return'].iloc[-1] - benchdata['Return'].iloc[0])/100
+            sr_2 = (return_2-0.07)/sd_2
+            #st.write(return_2)
+            #st.write(sd_2)
+            st.write('Sortino Ratio of Benchmark:', sr_2)
+
+            st.markdown('<p style="font-size:20px;"><b>Information Ratio</b></p>', unsafe_allow_html=True)
+            adj_close_df_beta_bench['Diff'] = adj_close_df_beta['PV_Port'] - adj_close_df_beta_bench['PV_Bench']
+            a = adj_close_df_beta_bench['Diff'].iloc[-1] - adj_close_df_beta_bench['Diff'].iloc[0]
+            sd_pr_br = adj_close_df_beta_bench['Diff'].std()
+            ir = a/sd_pr_br
+            ir_formatted = "{:.10f}".format(ir)
+            st.write('Information Ratio of Portfolio:', ir_formatted)
+
+            st.markdown('<p style="font-size:20px;"><b>Sharpe Ratio</b></p>', unsafe_allow_html=True)
+            sharpe_ratio_port = (return_1-0.07)/std_port #Risk Free rate is taken to be 7%
+            sharpe_ratio_bench = (return_2-0.07)/std_bench #Risk free rate is taken to be 7%
+            #st.write(return_1)
+            #st.write(std_port)
+            st.write('Sharpe ratio of Portfolio:',sharpe_ratio_port*100)
+            #st.write(return_2)
+            #st.write(std_bench)
+            st.write('Sharpe ratio of Benchmark:',sharpe_ratio_bench*100)
+
+
+
+
+
+
+
 
             
     else: 
         st.write("Please upload the Excel files to proceed.")
+
 
 
 import math
