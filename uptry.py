@@ -50,7 +50,7 @@ if st.button('Next'):
     if uploaded_files:
         for uploaded_file in uploaded_files:
             if uploaded_file.name == selected_file:
-                df = pd.read_excel(uploaded_file, usecols=['SECURITY_ID', 'QUANTITY','Date', 'Company name', '16 Sectors', 'SEBI Mcap Class'])
+                df = pd.read_excel(uploaded_file, usecols=['SECURITY_ID', 'QUANTITY','Date', 'Company name', '16 Sectors', 'SEBI Mcap Class', 'PE', 'PB', 'Price', 'Div Yield(%)', 'DivPayOut', 'CurrentMC', 'CurrentSP', 'EPSM22', 'EPSJ22', 'EPSS22', 'EPSD22', 'Market Cap(cr)'])
                 df.dropna(inplace=True)  # Remove rows with NaN values
                 df['Date'] = pd.to_datetime(df['Date'])
                 start_date = df['Date'].min()
@@ -153,11 +153,14 @@ if st.button('Next'):
             first_row_adj_close = adj_close_df.iloc[0]
             total_budget = (first_row_adj_close * df['QUANTITY'].values).sum()
             wt_stock = ((first_row_adj_close * df['QUANTITY'].values) / total_budget) * 100
+            #df['Weightage(%)'] = ((first_row_adj_close * df['QUANTITY'].values) / total_budget) * 100
             portfolio_dict = dict(zip(df['yfName'], wt_stock))
+            df['Weightage(%)'] = portfolio_dict.values()
+            #st.write(df)
             vp_list = list(portfolio_dict.values())
             portfolio_array = np.array(vp_list)
 
-            rows = len(df['yfName'])
+            rows = len(stock_symbols)
             wt_bench = pd.read_csv(csv_file, nrows=rows).reset_index(drop=True) #nrows should be dynamic
             wt_bench_filtered = wt_bench[['Company Name', 'Weightage(%)']]
             benchmark_dict = dict(zip(wt_bench_filtered.iloc[:, 0], wt_bench_filtered.iloc[:, 1]))
@@ -583,6 +586,52 @@ if st.button('Next'):
             #st.write(std_bench)
             st.write('Sharpe ratio of Benchmark:',sharpe_ratio_bench*100)
 
+
+            #P/E Ratio
+            st.markdown('<p style="font-size:20px;"><b>P/E</b></p>', unsafe_allow_html=True)
+            df['Earnings'] = df.apply(lambda row: (row['Market Cap(cr)']/row['PE']), axis=1)
+            Total_Weighted_Mcap = ((df['Weightage(%)']/100) * df['Market Cap(cr)']).sum()
+            df['Weighted_Earnings'] = (df['Weightage(%)'] / 100) * df['Earnings']
+            Total_Earnings_weighted = df['Weighted_Earnings'].sum()
+            #st.write(df.set_index('Company name'))
+            #st.text("Total Weighted MarketCap(cr) is:")
+            #st.write(Total_Weighted_Mcap)
+            #st.text("Total Earnings(cr) is: ")
+            #st.write(Total_Earnings_weighted)
+            Port_PE_ratio=Total_Weighted_Mcap/Total_Earnings_weighted
+            st.markdown('**Portfolio P/E ratio is:**')
+            st.write(Port_PE_ratio)
+
+            #P/B Ratio
+            st.markdown('<p style="font-size:20px;"><b>P/B</b></p>', unsafe_allow_html=True)
+            df['Number_of_Shares'] = df['CurrentMC'] / df['Price']
+            df['Book Value'] = df.apply(lambda row: (row['Price']/row['PB']), axis=1)
+            df['Total_Book_Value'] = df['Book Value'] * df['Number_of_Shares']
+            df['Weighted_Book_Value'] = df['Weightage(%)'] * df['Total_Book_Value']
+            Total_Weighted_BV = df['Weighted_Book_Value'].sum()
+            Total_Weighted_Mcap = df['Weightage(%)'].dot(df['CurrentMC'])  # Weighted sum of Market Cap
+            #st.write(df)
+            Port_PB_ratio = Total_Weighted_Mcap / Total_Weighted_BV
+            st.markdown('**Portfolio P/B ratio is:**')
+            st.write(Port_PB_ratio)
+
+            #st.markdown("**ROE(%) of Portfolio is:**")
+            st.markdown('<p style="font-size:20px;"><b>ROE(%) of Portfolio is:</b></p>', unsafe_allow_html=True)
+            roe_port = Port_PB_ratio / Port_PE_ratio
+            st.write(roe_port)
+
+            #st.markdown("**Dividend Yield:**")
+            st.markdown('<p style="font-size:20px;"><b>Dividend Yield</b></p>', unsafe_allow_html=True)
+            #PE_frame['DivLastYear'] = PE_frame.apply(lambda row:(row['Div Yield(%)'] * row['CurrentMC']), axis=1)
+            #div_yield = PE_frame['DivLastYear'].sum() / Total_Weighted_Mcap
+            #st.write(div_yield)
+            df['ADS'] = df.apply(lambda row:(row['DivPayOut']/100)*(row['EPSM22']+row['EPSJ22']+row['EPSS22']+row['EPSD22']), axis=1)
+            df['CalDivYield'] = df.apply(lambda row:row['ADS']*100/row['CurrentSP'],axis=1)
+            df['Weighted_Div_Yield'] = df['Weightage(%)'] * df['CalDivYield']
+            Total_Weighted_Div_Yield = (df['Weighted_Div_Yield'].sum())/100
+            #st.write(df.set_index('Stock'))
+            st.markdown("**Dividend yield(%) of the portfolio is:**")
+            st.write(Total_Weighted_Div_Yield)
 
 
 
