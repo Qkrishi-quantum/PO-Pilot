@@ -632,13 +632,6 @@ if st.button('Next'):
             #st.write(df.set_index('Stock'))
             st.markdown("**Dividend yield(%) of the portfolio is:**")
             st.write(Total_Weighted_Div_Yield)
-
-
-
-
-
-
-
             
     else: 
         st.write("Please upload the Excel files to proceed.")
@@ -853,8 +846,8 @@ if st.button('Rebalancing'):
                         opt_results_df.loc[i] = row.copy()
                         first_purchase = False
                     return opt_results_df
-                    
-                st.write(optimal_stocks_to_buy)
+                
+                #st.write(optimal_stocks_to_buy)
                 #optimal_stocks_to_buy = {'BHARTIARTL.NS': 109.0, 'HDFCBANK.NS': 92.0, 'HINDUNILVR.NS': 92.0, 'ICICIBANK.NS': 104.0, 'INFY.NS': 86.0, 'ITC.NS': 112.0, 'LT.NS': 118.0, 'RELIANCE.NS': 107.0, 'SBIN.NS': 104.0, 'TCS.NS': 95.0, 'BAJFINANCE.NS':100.0, 'MARUTI.NS': 87.0, 'TITAN.NS':60.0}
                 process_portfolio_amar = process_portfolio(optimal_stocks_to_buy)
                 process_portfolio_amar_df = process_portfolio_amar.to_csv('rebalancing_test.csv')
@@ -867,6 +860,7 @@ if st.button('Rebalancing'):
                         new_row_df[column] = "" if column == "Date" else 0
                 new_row_df = new_row_df[dataf.columns]
                 updated_dataf = pd.concat([new_row_df, dataf], ignore_index=True)
+                #st.write(updated_dataf)
 
                 tickers = constituents['Symbol'].to_list()
                 for column in updated_dataf.columns:
@@ -875,12 +869,22 @@ if st.button('Rebalancing'):
                 updated_dataf = updated_dataf.drop('Unnamed: 0', axis=1)
                 columns_to_style = tickers
                 def apply_styling(value):
-                    if value > 0:
-                        return f'<span style="color: green;">{value}</span>'
-                    elif value < 0:
-                        return f'<span style="color: red;">{value}</span>'
-                    else:
-                        return value
+                    if isinstance(value, (int, float)):  # Ensure the value is numeric before comparison
+                        if value > 0:
+                            return f'<span style="color: green;">{value}</span>'
+                        elif value < 0:
+                            return f'<span style="color: red;">{value}</span>'
+                        else:
+                            return value
+                    return value  # If the value is already a string, return it as-is
+
+                #def apply_styling(value):
+                    #if int(value) > 0:
+                        #return f'<span style="color: green;">{value}</span>'
+                    #elif int(value) < 0:
+                        #return f'<span style="color: red;">{value}</span>'
+                    #else:
+                        #return value
                     
                 for column in columns_to_style:
                     updated_dataf[column] = updated_dataf[column].apply(apply_styling)
