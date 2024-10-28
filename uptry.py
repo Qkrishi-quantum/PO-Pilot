@@ -666,6 +666,7 @@ if st.button('Rebalancing'):
                 num_stocks = df['QUANTITY']
                 #st.write(num_stocks.reset_index(drop=True))
                 #st.write(num_stocks)
+                optimal_stocks_to_buy = dict(zip(df['SECURITY_ID'], df['QUANTITY']))
                 historical_data = {}
                 for symbol in stock_symbols:
                     historical_data[symbol] = yf.download(symbol, start=start_date, end=end_date)['Adj Close']
@@ -853,7 +854,7 @@ if st.button('Rebalancing'):
                         first_purchase = False
                     return opt_results_df
                 
-                optimal_stocks_to_buy = {'BHARTIARTL.NS': 109.0, 'HDFCBANK.NS': 92.0, 'HINDUNILVR.NS': 92.0, 'ICICIBANK.NS': 104.0, 'INFY.NS': 86.0, 'ITC.NS': 112.0, 'LT.NS': 118.0, 'RELIANCE.NS': 107.0, 'SBIN.NS': 104.0, 'TCS.NS': 95.0, 'BAJFINANCE.NS':100.0, 'MARUTI.NS': 87.0, 'TITAN.NS':60.0}
+                #optimal_stocks_to_buy = {'BHARTIARTL.NS': 109.0, 'HDFCBANK.NS': 92.0, 'HINDUNILVR.NS': 92.0, 'ICICIBANK.NS': 104.0, 'INFY.NS': 86.0, 'ITC.NS': 112.0, 'LT.NS': 118.0, 'RELIANCE.NS': 107.0, 'SBIN.NS': 104.0, 'TCS.NS': 95.0, 'BAJFINANCE.NS':100.0, 'MARUTI.NS': 87.0, 'TITAN.NS':60.0}
                 process_portfolio_amar = process_portfolio(optimal_stocks_to_buy)
                 process_portfolio_amar_df = process_portfolio_amar.to_csv('rebalancing_test.csv')
                 dataf = pd.read_csv('rebalancing_test.csv')
